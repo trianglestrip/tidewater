@@ -2,6 +2,11 @@ import './core/BenchSeed.js';
 import { App } from './App.js';
 import { UI } from './ui/UI.js';
 import { AppUI } from './ui/AppUI.js';
+import { applyDom, reportMissing } from './i18n.js';
+
+// the static loading screen is markup in index.html: fill it before anything else paints over it
+applyDom();
+reportMissing();
 
 // ?bench runs in background tabs too (automation): rAF does not fire in a hidden page
 if ( /[?&]bench\b/.test( location.search ) ) {

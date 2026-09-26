@@ -1,6 +1,7 @@
 import { Vector3, Color } from '../engine/index.js';
+import { t } from '../i18n.js';
 import { WORLD } from '../world/WorldLayout.js';
-import { FISH } from './FishTable.js';
+import { FISH, fishName } from './FishTable.js';
 import { habitatAt, pickSpecies, rollWeight, biteDelay } from './Bites.js';
 import { CatchMinigame } from './CatchMinigame.js';
 import { GameState } from './GameState.js';
@@ -8,7 +9,7 @@ import { FishingRod } from './FishingRod.js';
 import { FishStand } from './FishStand.js';
 import { Chandlery } from './Chandlery.js';
 import { CatchDisplay } from './CatchDisplay.js';
-import { UPGRADES, fuelBurn } from './Gear.js';
+import { UPGRADES, fuelBurn, upgradeName, upgradeLabel } from './Gear.js';
 import { GameHUD } from './GameHUD.js';
 import { Minimap } from './Minimap.js';
 import { Guide } from './Guide.js';
@@ -159,7 +160,7 @@ export class Game {
 
 			rod.equip( ! rod.equipped );
 			if ( ! rod.equipped ) this.cancelLine();
-			this.toast( rod.equipped ? 'Rod out · hold left mouse to cast' : 'Rod away', 1600 );
+			this.toast( t( rod.equipped ? 'toast.rodOut' : 'toast.rodAway' ), 1600 );
 
 		}
 

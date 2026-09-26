@@ -1,4 +1,4 @@
-import { Texture, ComputeKernel, generateMipmaps } from '../engine/webgpu.js';
+import { Texture, ComputeKernel, generateMipmaps, GPU } from '../engine/webgpu.js';
 
 // Tileable procedural foam, generated once on the GPU.
 //
@@ -10,7 +10,9 @@ import { Texture, ComputeKernel, generateMipmaps } from '../engine/webgpu.js';
 //   B: soft large-scale mottling
 //   A: streaks
 // Sample it with smpAnisoRepeat / smpLinearRepeat (mipmapped rgba16float).
-export function createFoamTexture( renderer, size = 1024 ) {
+// Async: the kernel is compiled in the background first, so the dispatch does not have to fall
+// back to a synchronous compile (which would block the browser's GPU process on its own).
+export async function createFoamTexture( renderer, size = 1024 ) {
 
 	const tex = new Texture( {
 		label: 'foamPattern', width: size, height: size, format: 'rgba16float', mips: true,
@@ -104,6 +106,7 @@ fn main( @builtin( global_invocation_id ) gid: vec3u ) {
 }`,
 	} );
 
+	await GPU.pipelinesReady();
 	kernel.dispatch( [ size / 8, size / 8, 1 ] );
 	generateMipmaps( tex );
 	return tex;

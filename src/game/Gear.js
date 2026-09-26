@@ -3,6 +3,10 @@
 // state.upgrades[ key ]++ and the stats follow.
 //
 // Each track: levels[ 0 ] is what you start with; cost is the price of that level (0 for the first).
+// `name` / `label` are the English text; the display strings come from i18n (see upgradeName /
+// upgradeLabel) so the shop and the toasts follow the language.
+import { t } from '../i18n.js';
+
 export const UPGRADES = {
 	// rod and reel
 	line: { name: 'Fishing line', levels: [
@@ -48,6 +52,22 @@ export const UPGRADES = {
 };
 
 export const FUEL_PRICE = 1.5; // $ per litre of diesel at the chandlery
+
+// i18n key per track (the track key is not always a usable key: fishFinder -> gear.finder)
+const I18N_KEY = { line: 'line', reel: 'reel', rod: 'rod', hold: 'hold', fuel: 'fuel', engine: 'engine', fishFinder: 'finder', lights: 'lights' };
+
+// display name of a track / of one of its levels, in the active language
+export function upgradeName( key ) {
+
+	return t( `gear.${ I18N_KEY[ key ] || key }` );
+
+}
+
+export function upgradeLabel( key, index ) {
+
+	return t( `gear.${ I18N_KEY[ key ] || key }.${ index }` );
+
+}
 // litres per second at the helm: idle plus a lot more at full rpm (40 L lasts ~25 min flat out)
 export function fuelBurn( rpm ) {
 

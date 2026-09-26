@@ -60,6 +60,7 @@ export class SceneRenderer {
 		this.background = null;
 		this.clearColor = [ 0, 0, 0, 1 ];
 		this.onBeforeWater = null;
+		this._ensureDepthHalfPass();
 
 	}
 
@@ -114,6 +115,19 @@ export class SceneRenderer {
 
 	}
 
+	// the depth-half pass is created up front (constructor) so it compiles in the background with
+	// everything else, instead of on the first frame where GPU.ready() would compile it synchronously
+	_ensureDepthHalfPass() {
+
+		if ( ! this._depthHalfPass ) this._depthHalfPass = new FullscreenPass( {
+			label: 'opaque depth half', colorFormats: [ 'r16float' ],
+			bindings: { srcDepth: { texture: () => this.opaqueCopy.depthTexture } },
+			code: 'fn fragment( in: FSIn ) -> vec4f { return vec4f( textureLoad( srcDepth, vec2i( in.pos.xy ), 0 ), 0.0, 0.0, 1.0 ); }',
+		} );
+		return this._depthHalfPass;
+
+	}
+
 	render() {
 
 		const { scene, camera, meshRenderer: mr } = this;
@@ -133,12 +147,7 @@ export class SceneRenderer {
 		const size = { width: rt.width, height: rt.height };
 		enc.copyTextureToTexture( { texture: rt.texture.getGPU() }, { texture: this.opaqueCopy.texture.getGPU() }, size );
 		enc.copyTextureToTexture( { texture: rt.depthTexture.getGPU() }, { texture: this.opaqueCopy.depthTexture.getGPU() }, size );
-		if ( ! this._depthHalfPass ) this._depthHalfPass = new FullscreenPass( {
-			label: 'opaque depth half', colorFormats: [ 'r16float' ],
-			bindings: { srcDepth: { texture: () => this.opaqueCopy.depthTexture } },
-			code: 'fn fragment( in: FSIn ) -> vec4f { return vec4f( textureLoad( srcDepth, vec2i( in.pos.xy ), 0 ), 0.0, 0.0, 1.0 ); }',
-		} );
-		this._depthHalfPass.render( { colorViews: [ this.opaqueDepthHalf.texture ], clear: [ 0, 0, 0, 0 ] } );
+		this._ensureDepthHalfPass().render( { colorViews: [ this.opaqueDepthHalf.texture ], clear: [ 0, 0, 0, 0 ] } );
 
 		// 3. hull interiors
 		if ( this.hullMasks.length > 0 ) this._renderHullMasks( camera );

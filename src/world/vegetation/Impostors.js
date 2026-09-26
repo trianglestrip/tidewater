@@ -1,4 +1,5 @@
 import * as THREE from '../../engine/index.js';
+import { GPU } from '../../engine/gpu/GPU.js';
 import { Texture } from '../../engine/gpu/Texture.js';
 import { generateMipmaps } from '../../engine/gpu/Mipmaps.js';
 import { Material } from '../../engine/render/Material.js';
@@ -116,6 +117,23 @@ export class ImpostorAtlas {
 
 	// Records the bake into the frame encoder (renderer: optional MeshRenderer; a private one is
 	// used otherwise). Every group has its own orthographic view block (one buffer value per submit).
+	// The mesh pipelines are created by the bake itself, so a bake on a cold cache would compile
+	// them synchronously, one draw list at a time; precompile() runs the bake once in precompiling
+	// mode (pipelines only, draws skipped), waits for those compiles, then bakes for real.
+	async precompile( renderer = null ) {
+
+		if ( this.baked ) return;
+		const mr = renderer && renderer.render && renderer.collect ? renderer : ( this._mr || ( this._mr = new MeshRenderer() ) );
+		if ( renderer ) this._mr = mr;
+		mr.precompiling = true;
+		this.bake( mr );
+		mr.precompiling = false;
+		await GPU.pipelinesReady();
+		this.baked = false; // the run above only created the pipelines
+		this.bake( mr );
+
+	}
+
 	bake( renderer = null ) {
 
 		const t0 = performance.now();

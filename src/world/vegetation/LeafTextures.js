@@ -1,4 +1,5 @@
 import { Texture } from '../../engine/gpu/Texture.js';
+import { GPU } from '../../engine/gpu/GPU.js';
 import { FullscreenPass } from '../../engine/render/FullscreenPass.js';
 import { generateMipmaps } from '../../engine/gpu/Mipmaps.js';
 import { ShaderModule } from '../../engine/gpu/Shader.js';
@@ -91,8 +92,12 @@ fn vegLeafSample( st: vec2f, tile: f32 ) -> vec4f {
 	}
 
 	// renderer: unused (kept for the three.js signature); records into the frame encoder
-	bake() {
+	// The pass is built separately from the draw so precompile() can let it compile in the
+	// background first: a dispatch on a not-yet-compiled pipeline falls back to a blocking
+	// synchronous compile.
+	_build() {
 
+		if ( this._pass ) return this._pass;
 		let body = '';
 		for ( let t = 0; t < 4; t ++ ) {
 
@@ -139,7 +144,25 @@ ${ body }
 }
 `,
 		} );
-		pass.render( { colorViews: [ this.texture ], clear: [ 0, 0, 0, 0 ] } );
+		this._pass = pass;
+		return pass;
+
+	}
+
+	// compiles the bake pass in the background, then bakes (App.precompile calls this)
+	async precompile() {
+
+		if ( this.baked ) return;
+		this._build();
+		await GPU.pipelinesReady();
+		this.bake();
+
+	}
+
+	bake() {
+
+		if ( this.baked ) return;
+		this._build().render( { colorViews: [ this.texture ], clear: [ 0, 0, 0, 0 ] } );
 		generateMipmaps( this.texture );
 		this.baked = true;
 

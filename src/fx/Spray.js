@@ -473,6 +473,15 @@ ${ deposit ? /* wgsl */`				// fell into the water (not onto the sand): its bubb
 
 	}
 
+	// Builds the update kernel and lets it compile in the background, so the first update() does not
+	// have to fall back to a synchronous compile (App.precompile calls this before the first frame).
+	async prepare() {
+
+		if ( ! this.updateKernel ) this._buildUpdate();
+		await GPU.pipelinesReady();
+
+	}
+
 	update() {
 
 		if ( ! this.updateKernel ) this._buildUpdate();

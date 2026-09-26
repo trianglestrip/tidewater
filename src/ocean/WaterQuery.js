@@ -1,4 +1,4 @@
-import { G, StorageBuffer, ShaderModule, ComputeKernel, Readback } from '../engine/webgpu.js';
+import { G, GPU, StorageBuffer, ShaderModule, ComputeKernel, Readback } from '../engine/webgpu.js';
 import { commonModule } from '../engine/render/wgsl/common.js';
 
 export const MAX_QUERIES = 64;
@@ -187,6 +187,15 @@ fn main( @builtin( global_invocation_id ) gid: vec3u ) {
 		out.nz = c[ i * 4 + 2 ];
 		out.floor = c[ i * 4 + 3 ];
 		return out;
+
+	}
+
+	// Builds the kernel and lets it compile in the background, so the first update() does not have
+	// to fall back to a synchronous compile (App.precompile calls this before the first frame).
+	async prepare() {
+
+		if ( ! this.kernel ) this._build();
+		await GPU.pipelinesReady();
 
 	}
 

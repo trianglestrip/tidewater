@@ -637,13 +637,12 @@ export class VillageTextures {
 
 	}
 
-	// Records every bake pass into the current frame encoder (call outside of a render pass).
-	bake() {
+	// Builds the bake kernels (fields + derive per set) without running them, so all of them can be
+	// compiled in parallel before the bake itself (see precompile). The plan is built once.
+	_plan() {
 
-		if ( this.baked ) return;
-		this.baked = true;
-		const t0 = performance.now();
-		const transient = [];
+		if ( this._bakePlan ) return this._bakePlan;
+		const plan = [];
 		for ( const job of this.jobs ) {
 
 			const { set } = job;
@@ -667,11 +666,11 @@ fn main( @builtin( global_invocation_id ) gid: vec3u ) {
 }
 `,
 			} );
-			fieldsKernel.dispatch( fieldsKernel.groups( set.w, set.h ) );
 
+			let deriveKernel = null;
 			if ( job.nra ) {
 
-				const deriveKernel = new ComputeKernel( {
+				deriveKernel = new ComputeKernel( {
 					label: 'VillageBakeDerive ' + set.name,
 					bindings: {
 						vlgFields: { texture: job.fields, sampleType: 'unfilterable-float' },
@@ -680,6 +679,43 @@ fn main( @builtin( global_invocation_id ) gid: vec3u ) {
 					workgroupSize: [ 8, 8, 1 ],
 					code: deriveCode( set ),
 				} );
+
+			}
+
+			plan.push( { job, fieldsKernel, deriveKernel } );
+
+		}
+
+		this._bakePlan = plan;
+		return plan;
+
+	}
+
+	// Compiles every bake kernel in the background, then bakes (App.precompile calls this): without
+	// it the first dispatch of each kernel falls back to a synchronous compile, one after another.
+	async precompile() {
+
+		if ( this.baked ) return;
+		this._plan();
+		await GPU.pipelinesReady();
+		this.bake();
+
+	}
+
+	// Records every bake pass into the current frame encoder (call outside of a render pass).
+	bake() {
+
+		if ( this.baked ) return;
+		this.baked = true;
+		const t0 = performance.now();
+		const transient = [];
+		for ( const { job, fieldsKernel, deriveKernel } of this._plan() ) {
+
+			const { set } = job;
+			fieldsKernel.dispatch( fieldsKernel.groups( set.w, set.h ) );
+
+			if ( deriveKernel ) {
+
 				deriveKernel.dispatch( deriveKernel.groups( set.w, set.h ) );
 				generateMipmaps( job.nra );
 				transient.push( job.fields );

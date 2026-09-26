@@ -1,4 +1,5 @@
 import { icon, brandMark } from './icons.js';
+import { t, th, getLang, setLang, LANGS } from '../i18n.js';
 
 // Tidewater UI: settings panel (tabs → folders → controls), HUD, help,
 // photo mode, start overlay and loader. Plain DOM, no dependencies.
@@ -12,7 +13,8 @@ let uidCounter = 0;
 const uid = ( p = 'tw' ) => `${ p }-${ ++ uidCounter }`;
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' };
-const esc = ( s ) => String( s ?? '' ).replace( /[&<>"']/g, ( c ) => ESC[ c ] );
+// HTML-escapes a translated string before it goes into an innerHTML template
+export const esc = ( s ) => String( s ?? '' ).replace( /[&<>"']/g, ( c ) => ESC[ c ] );
 
 // Tiny element factory: h( 'button', 'cls', { type: 'button', text: 'Hi' } )
 function h( tag, cls, attrs ) {
@@ -123,13 +125,13 @@ function skyAt( hour ) {
 
 }
 
-const PHASES = [ [ 4.8, 'Night' ], [ 5.6, 'Dawn' ], [ 6.4, 'Sunrise' ], [ 7.2, 'Golden hour' ], [ 10.5, 'Morning' ],
-	[ 13.5, 'Midday' ], [ 16.8, 'Afternoon' ], [ 17.6, 'Golden hour' ], [ 18.4, 'Sunset' ], [ 19.3, 'Dusk' ], [ 24, 'Night' ] ];
+const PHASES = [ [ 4.8, 'time.night' ], [ 5.6, 'time.dawn' ], [ 6.4, 'time.sunrise' ], [ 7.2, 'time.golden' ], [ 10.5, 'time.morning' ],
+	[ 13.5, 'time.midday' ], [ 16.8, 'time.afternoon' ], [ 17.6, 'time.golden' ], [ 18.4, 'time.sunset' ], [ 19.3, 'time.dusk' ], [ 24, 'time.night' ] ];
 
 const phaseAt = ( hh ) => {
 
-	for ( const [ end, name ] of PHASES ) if ( hh < end ) return name;
-	return 'Night';
+	for ( const [ end, key ] of PHASES ) if ( hh < end ) return t( key );
+	return t( 'time.night' );
 
 };
 
@@ -333,11 +335,11 @@ class Control {
 		if ( tooltip ) {
 
 			txt.dataset.tip = tooltip;
-			txt.dataset.tipHint = 'Double-click to reset';
+			txt.dataset.tipHint = t( 'hud.tipReset' );
 
 		}
 
-		const rst = h( 'button', 'tw-reset', { type: 'button', tabindex: '-1', 'aria-label': `Reset ${ text }`, 'data-tip': 'Reset to default', html: icon( 'reset' ) } );
+		const rst = h( 'button', 'tw-reset', { type: 'button', tabindex: '-1', 'aria-label': t( 'hud.resetLabel', { label: text } ), 'data-tip': t( 'hud.resetDefault' ), html: icon( 'reset' ) } );
 		rst.addEventListener( 'click', ( e ) => {
 
 			e.stopPropagation();
@@ -1360,14 +1362,14 @@ class TimeOfDayControl extends Control {
 
 	constructor( parent, o ) {
 
-		super( parent, Object.assign( {}, o, { label: o.label ?? 'Time of day' } ), 'time' );
+		super( parent, Object.assign( {}, o, { label: o.label ?? t( 'time.label' ) } ), 'time' );
 		this._default = Number( this.value ) || 0;
 		this.onFinishChange = o.onFinishChange || null;
 		const id = uid( 'tw-tod' );
 
 		const head = h( 'div', 'tw-row' );
 		head.append( this._makeLabel( this.label, o.tooltip ) );
-		this.valueEl = h( 'button', 'tw-value tw-clock', { type: 'button', tabindex: '-1', 'data-tip': 'Click to type a time' } );
+		this.valueEl = h( 'button', 'tw-value tw-clock', { type: 'button', tabindex: '-1', 'data-tip': t( 'hud.tipTypeTime' ) } );
 		head.append( this.valueEl );
 
 		const dial = h( 'div', 'tw-tod' );
@@ -1928,8 +1930,8 @@ export class UI {
 			<div class="tw-stats-main"><span class="tw-fps">--</span><span class="tw-fps-unit">fps</span></div>
 			<canvas class="tw-spark"></canvas>
 			<div class="tw-stats-sub">
-				<span class="tw-kv"><span class="tw-k">frame</span><span class="tw-v tw-ms">--</span></span>
-				<span class="tw-kv tw-kv-gpu" hidden><span class="tw-k">gpu</span><span class="tw-v tw-gpu">--</span></span>
+				<span class="tw-kv"><span class="tw-k">${ esc( t( 'hud.frame' ) ) }</span><span class="tw-v tw-ms">--</span></span>
+				<span class="tw-kv tw-kv-gpu" hidden><span class="tw-k">${ esc( t( 'hud.gpu' ) ) }</span><span class="tw-v tw-gpu">--</span></span>
 			</div>`;
 		this.fpsEl = stats.querySelector( '.tw-fps' );
 		this.msEl = stats.querySelector( '.tw-ms' );
@@ -1965,7 +1967,7 @@ export class UI {
 			<span class="tw-depth-mark"></span>
 			<div class="tw-depth-read">
 				<div class="tw-depth-line"><span class="tw-depth-num">0.0</span><span class="tw-unit">m</span></div>
-				<span class="tw-g-lab">Depth</span>
+				<span class="tw-g-lab">${ esc( t( 'hud.depth' ) ) }</span>
 			</div>`;
 		this.depthCanvas = this.depthEl.querySelector( '.tw-depth-tape' );
 		this.depthNum = this.depthEl.querySelector( '.tw-depth-num' );
@@ -1974,7 +1976,7 @@ export class UI {
 
 		// the one element that survives photo mode
 		this.photoHint = h( 'div', 'tw-photo-hint' );
-		this.photoHint.innerHTML = '<kbd>P</kbd><span>Exit photo mode</span>';
+		this.photoHint.innerHTML = `<kbd>P</kbd><span>${ esc( t( 'hud.exitPhoto' ) ) }</span>`;
 
 		this.root.append( hud, this.photoHint );
 
@@ -2036,7 +2038,7 @@ export class UI {
 					<circle class="tw-dial-head" r="3" cx="24.64" cy="95.36"/>
 					<text class="tw-dial-rpm" x="60" y="105">rpm 0%</text>
 				</svg>
-				<div class="tw-dial-center"><span class="tw-speed">0.0</span><span class="tw-g-unit">knots</span></div>
+				<div class="tw-dial-center"><span class="tw-speed">0.0</span><span class="tw-g-unit">${ esc( t( 'hud.knots' ) ) }</span></div>
 			</div>
 			<div class="tw-compass">
 				<svg viewBox="0 0 100 100">
@@ -2062,11 +2064,11 @@ export class UI {
 
 	_buildPanel() {
 
-		const panel = this.panel = h( 'aside', 'tw-panel tw-glass tw-interactive', { 'aria-label': 'Settings' } );
+		const panel = this.panel = h( 'aside', 'tw-panel tw-glass tw-interactive', { 'aria-label': t( 'set.title' ) } );
 		panel.inert = true;
 
 		const head = h( 'header', 'tw-panel-head' );
-		head.append( h( 'div', 'tw-panel-title', { text: 'Settings' } ) );
+		head.append( h( 'div', 'tw-panel-title', { text: t( 'set.title' ) } ) );
 		const actions = h( 'div', 'tw-panel-actions' );
 		const action = ( name, tip, fn ) => {
 
@@ -2076,12 +2078,12 @@ export class UI {
 
 		};
 
-		action( 'viewfinder', 'Photo mode (P)', () => this.setPhotoMode( true ) );
-		action( 'help', 'Controls (F1)', () => this.toggleHelp() );
-		action( 'chevrons-right', 'Collapse (H)', () => this.togglePanel( false ) );
+		action( 'viewfinder', t( 'set.photo' ), () => this.setPhotoMode( true ) );
+		action( 'help', t( 'set.controls' ), () => this.toggleHelp() );
+		action( 'chevrons-right', t( 'set.collapse' ), () => this.togglePanel( false ) );
 		head.append( actions );
 
-		this.tabBar = h( 'div', 'tw-tabs', { role: 'tablist', 'aria-label': 'Settings sections' } );
+		this.tabBar = h( 'div', 'tw-tabs', { role: 'tablist', 'aria-label': t( 'set.sections' ) } );
 		this.tabBar.addEventListener( 'keydown', ( e ) => {
 
 			const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? - 1 : 0;
@@ -2103,15 +2105,15 @@ export class UI {
 		this.pages = h( 'div', 'tw-pages' );
 
 		const foot = h( 'footer', 'tw-panel-foot' );
-		foot.innerHTML = '<span><kbd>H</kbd>Hide</span><span><kbd>F1</kbd>Controls</span><span><kbd>P</kbd>Photo mode</span>';
+		foot.innerHTML = `<span><kbd>H</kbd>${ esc( t( 'set.hide' ) ) }</span><span><kbd>F1</kbd>${ esc( t( 'set.controls' ).replace( /\s*\(.*\)$/, '' ) ) }</span><span><kbd>P</kbd>${ esc( t( 'set.photo' ).replace( /\s*\(.*\)$/, '' ) ) }</span>`;
 		panel.append( head, this.tabBar, this.pages, foot );
 
 		// collapsed state: a slim rail of tab icons
-		const rail = this.rail = h( 'nav', 'tw-rail tw-glass tw-interactive', { 'aria-label': 'Settings' } );
-		const open = h( 'button', 'tw-rail-btn tw-rail-open', { type: 'button', 'aria-label': 'Open settings', 'data-tip': 'Settings (H)', 'data-tip-side': 'left', html: icon( 'sliders' ) } );
+		const rail = this.rail = h( 'nav', 'tw-rail tw-glass tw-interactive', { 'aria-label': t( 'set.title' ) } );
+		const open = h( 'button', 'tw-rail-btn tw-rail-open', { type: 'button', 'aria-label': t( 'set.open' ), 'data-tip': t( 'set.tipOpen' ), 'data-tip-side': 'left', html: icon( 'sliders' ) } );
 		open.addEventListener( 'click', () => this.togglePanel( true ) );
 		this.railTabs = h( 'div', 'tw-rail-tabs' );
-		const help = h( 'button', 'tw-rail-btn', { type: 'button', 'aria-label': 'Controls', 'data-tip': 'Controls (F1)', 'data-tip-side': 'left', html: icon( 'help' ) } );
+		const help = h( 'button', 'tw-rail-btn', { type: 'button', 'aria-label': t( 'set.controls' ), 'data-tip': t( 'set.controls' ), 'data-tip-side': 'left', html: icon( 'help' ) } );
 		help.addEventListener( 'click', () => this.toggleHelp() );
 		rail.append( open, h( 'span', 'tw-rail-sep' ), this.railTabs, h( 'span', 'tw-rail-sep' ), help );
 
@@ -2125,50 +2127,51 @@ export class UI {
 		const row = ( keys, text ) => `<div class="tw-help-row"><span class="tw-keys">${ keys }</span><span class="tw-help-text">${ text }</span></div>`;
 		const wasd = '<span class="tw-wasd"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>';
 		const mouse = `<kbd class="tw-kbd-ico" aria-label="Mouse">${ icon( 'mouse' ) }</kbd>`;
+		const R = ( key, text ) => row( key, th( text ) );
 
 		const el = this.helpEl = h( 'div', 'tw-help tw-interactive', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'tw-help-title', hidden: true } );
 		el.innerHTML = `
 			<div class="tw-help-card tw-glass">
 				<header class="tw-help-head">
 					<div>
-						<h2 id="tw-help-title">Controls</h2>
-						<p>Click the view to capture the mouse. Esc releases it.</p>
+						<h2 id="tw-help-title">${ esc( t( 'help.title' ) ) }</h2>
+						<p>${ esc( t( 'help.sub' ) ) }</p>
 					</div>
-					<button type="button" class="tw-icon-btn tw-help-close" aria-label="Close" data-tip="Close (F1)">${ icon( 'close' ) }</button>
+					<button type="button" class="tw-icon-btn tw-help-close" aria-label="${ esc( t( 'help.close' ) ) }" data-tip="${ esc( t( 'help.closeTip' ) ) }">${ icon( 'close' ) }</button>
 				</header>
 				<div class="tw-help-grid">
 					<section>
-						<h3>Move</h3>
-						${ row( wasd, 'Move' ) }
-						${ row( mouse, 'Look around<small>Click to capture</small>' ) }
-						${ row( k( 'Shift' ), 'Sprint, boat boost' ) }
-						${ row( k( 'Space' ), 'Jump, swim up' ) }
-						${ row( k( 'C' ), 'Crouch, dive' ) }
+						<h3>${ esc( t( 'help.move' ) ) }</h3>
+						${ R( wasd, 'help.move.walk' ) }
+						${ R( mouse, 'help.move.look' ) }
+						${ R( k( 'Shift' ), 'help.move.sprint' ) }
+						${ R( k( 'Space' ), 'help.move.jump' ) }
+						${ R( k( 'C' ), 'help.move.crouch' ) }
 					</section>
 					<section>
-						<h3>Interact</h3>
-						${ row( k( 'E' ), 'Interact<small>Board, helm, step ashore, trade</small>' ) }
-						${ row( k( 'V' ), 'Boat camera<small>1st / 3rd person</small>' ) }
-						${ row( k( 'R' ), 'Fishing rod<small>Take out / put away</small>' ) }
-						${ row( k( 'LMB' ), 'Cast, strike, reel<small>Hold to wind up / reel</small>' ) }
-						${ row( k( 'RMB' ), 'Reel in an empty line' ) }
-						${ row( k( 'I' ), 'Cooler and fish log' ) }
-						${ row( k( 'F' ), 'Free camera' ) }
-						${ row( k( 'T' ), 'Pause time' ) }
-						${ row( k( 'L' ), 'Flashlight' ) }
-						${ row( k( 'M' ), 'Mute' ) }
+						<h3>${ esc( t( 'help.interact' ) ) }</h3>
+						${ R( k( 'E' ), 'help.do.interact' ) }
+						${ R( k( 'V' ), 'help.do.boatCamera' ) }
+						${ R( k( 'R' ), 'help.do.rod' ) }
+						${ R( k( 'LMB' ), 'help.do.cast' ) }
+						${ R( k( 'RMB' ), 'help.do.reelIn' ) }
+						${ R( k( 'I' ), 'help.do.cooler' ) }
+						${ R( k( 'F' ), 'help.do.freeCam' ) }
+						${ R( k( 'T' ), 'help.do.pauseTime' ) }
+						${ R( k( 'L' ), 'help.do.flashlight' ) }
+						${ R( k( 'M' ), 'help.do.mute' ) }
 					</section>
 					<section>
-						<h3>Interface</h3>
-						${ row( k( 'H' ), 'Settings panel' ) }
-						${ row( k( 'P' ), 'Photo mode<small>Hides all interface</small>' ) }
-						${ row( k( 'F1' ) + k( '?' ), 'This sheet' ) }
-						${ row( k( 'Esc' ), 'Release the mouse' ) }
+						<h3>${ esc( t( 'help.interface' ) ) }</h3>
+						${ R( k( 'H' ), 'help.ui.settings' ) }
+						${ R( k( 'P' ), 'help.ui.photo' ) }
+						${ R( k( 'F1' ) + k( '?' ), 'help.ui.sheet' ) }
+						${ R( k( 'Esc' ), 'help.ui.release' ) }
 					</section>
 				</div>
 				<div class="tw-help-guide">
-					<span><b>How to play:</b> catch fish, sell them to Joe at the fish stand by the pier, and buy upgrades from Marta at the chandlery by the boathouse. Both are on the map (lower right).</span>
-					<button type="button" class="gm-btn is-ghost tw-help-replay">Replay the guide</button>
+					<span><b>${ esc( t( 'help.howToLabel' ) ) }</b>${ esc( t( 'help.howTo' ) ) }</span>
+					<button type="button" class="gm-btn is-ghost tw-help-replay">${ esc( t( 'help.replay' ) ) }</button>
 				</div>
 			</div>`;
 		el.querySelector( '.tw-help-close' ).addEventListener( 'click', () => this.toggleHelp( false ) );
@@ -2189,13 +2192,13 @@ export class UI {
 			<div class="tw-start-inner">
 				${ brandMark( 'tw-start-mark' ) }
 				<div class="tw-start-title">TIDEWATER</div>
-				<button type="button" class="tw-start-cta"><span class="tw-start-pulse" aria-hidden="true"></span>${ icon( 'mouse' ) }<span>Click to explore</span></button>
+				<button type="button" class="tw-start-cta"><span class="tw-start-pulse" aria-hidden="true"></span>${ icon( 'mouse' ) }<span>${ esc( t( 'start.cta' ) ) }</span></button>
 				<div class="tw-start-keys">
-					<span><span class="tw-wasd"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>Move</span>
-					<span><kbd class="tw-kbd-ico">${ icon( 'mouse' ) }</kbd>Look</span>
-					<span><kbd>E</kbd>Interact</span>
-					<span><kbd>H</kbd>Settings</span>
-					<span><kbd>F1</kbd>All controls</span>
+					<span><span class="tw-wasd"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>${ esc( t( 'start.move' ) ) }</span>
+					<span><kbd class="tw-kbd-ico">${ icon( 'mouse' ) }</kbd>${ esc( t( 'start.look' ) ) }</span>
+					<span><kbd>E</kbd>${ esc( t( 'start.interact' ) ) }</span>
+					<span><kbd>H</kbd>${ esc( t( 'start.settings' ) ) }</span>
+					<span><kbd>F1</kbd>${ esc( t( 'start.allControls' ) ) }</span>
 				</div>
 			</div>`;
 		this.root.append( el );
@@ -3322,7 +3325,7 @@ export class UI {
 		const L = document.getElementById( 'loader' );
 		if ( ! L ) return Promise.resolve();
 		if ( this._loaderGone ) return this._loaderGone;
-		this.setLoading( 1, 'Ready' );
+		this.setLoading( 1, t( 'loader.ready' ) );
 		L.classList.remove( 'is-compiling' );
 		L.classList.add( 'tw-hidden' );
 		this._loaderGone = new Promise( ( resolve ) => setTimeout( () => {

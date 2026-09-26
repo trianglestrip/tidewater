@@ -12,6 +12,10 @@
 //   stamina   seconds of good pressure it takes to tire a typical one
 //   time      activity by time of day: 'day', 'dawnDusk', 'night' or 'any'
 //   rarity    0..1, scales how often it bites relative to the others in the same water
+//
+// `name` is the English display name; fishName( id ) returns it in the active language.
+import { t } from '../i18n.js';
+
 export const FISH = {
 	silverside: { name: 'Hardhead silverside', sci: 'Atherinomorus stipes', lw: [ 0.0074, 3.1 ], model: 'silverside', habitat: { shallows: 1, pier: 0.6, bay: 0.2 }, kg: [ 0.02, 0.08 ], price: 3, fight: 0.05, stamina: 1.5, time: 'any', rarity: 0.2 },
 	mullet: { name: 'Striped mullet', sci: 'Mugil cephalus', lw: [ 0.0112, 2.98 ], model: 'mullet', habitat: { shallows: 1, pier: 0.4 }, kg: [ 0.4, 2.2 ], price: 5, fight: 0.3, stamina: 5, time: 'day', rarity: 0.8 },
@@ -34,6 +38,13 @@ export const FISH = {
 };
 
 export const FISH_IDS = Object.keys( FISH );
+
+// display name of a species in the active language
+export function fishName( id ) {
+
+	return t( `fish.${ id }` );
+
+}
 
 // $ value of a fish; trophy-sized ones fetch a bit more per kg
 export function fishValue( id, kg ) {
